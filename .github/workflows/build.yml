@@ -1,1 +1,46 @@
-404: Not Found
+name: Build and Push
+
+permissions:
+  id-token: write
+  contents: read
+  
+on:
+  push:
+    branches:
+      - main  # Trigger on pushes to the main branch; adjust as needed.
+      - master
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      name: Check out the repo
+
+    - uses: MariachiBear/get-repo-name-action@v1.2.0
+      name: Get Repository Name
+      id: repo-name
+      with:
+          with-owner: 'false'
+          string-case: 'lowercase'
+          
+    - uses: docker/login-action@v2
+      name: "Login to docker hub"
+      with:
+          username: ${{ secrets.DOCKER_USERNAME }}  # Set in GitHub secrets
+          password: ${{ secrets.DOCKER_PASSWORD }}  # Set in GitHub secrets
+  
+    - name: Build and push Docker image
+      run: |
+        BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+        TAG=$(git describe --tags --always)
+        COMMIT_HASH=$(git rev-parse --short HEAD)
+        echo "TAG_COMMIT=$TAG-$BRANCH_NAME-$COMMIT_HASH" >> $GITHUB_ENV
+        echo "::set-output name=tag_commit::$TAG-$BRANCH_NAME-$COMMIT_HASH"
+        
+        docker build . -t ${{ secrets.DOCKER_USERNAME }}/$IMAGE_NAME:$TAG-$BRANCH_NAME-$COMMIT_HASH
+        docker push ${{ secrets.DOCKER_USERNAME }}/$IMAGE_NAME:$TAG-$BRANCH_NAME-$COMMIT_HASH
+
+      env:
+        ACR_LOGIN_SERVER: ${{ secrets.DOCKER_USERNAME }}  # Your ACR login server name.
+        IMAGE_NAME: ${{ steps.repo-name.outputs.repository-name }}
