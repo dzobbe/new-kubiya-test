@@ -19,6 +19,7 @@ jobs:
 
     - uses: MariachiBear/get-repo-name-action@v1.2.0
       name: Get Repository Name
+      id: repo-name
       with:
           with-owner: 'false'
           string-case: 'lowercase'
@@ -42,4 +43,4 @@ jobs:
 
       env:
         ACR_LOGIN_SERVER: ${{ secrets.DOCKER_USERNAME }}  # Your ACR login server name.
-        IMAGE_NAME: ${GITHUB_REPOSITORY##*/}
+        IMAGE_NAME: ${{ steps.repo-name.outputs.repository-name }}
